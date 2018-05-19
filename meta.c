@@ -1,4 +1,4 @@
-
+#pragma once
 #define H1(s,i,x)   (x*65599u+(uint8_t)s[(i)<(sizeof(s)-1)?(sizeof(s)-1)-1-(i):(sizeof(s)-1)])
 #define H4(s,i,x)   H1(s,i,H1(s,i+1,H1(s,i+2,H1(s,i+3,x))))
 #define H16(s,i,x)  H4(s,i,H4(s,i+4,H4(s,i+8,H4(s,i+12,x))))
@@ -13,16 +13,15 @@
         name##_1 = H64(s,0,0),\
         name = ( name##_1 >> 16) ^  name##_1\
     }
-#define     COMPILETIME_CONSTANT_BIT(value, bit)        char bt_##bit [1 + (((unsigned )(value) >> bit)&1)]
 
+#define     COMPILETIME_CONSTANT_BIT(value, bit)        unsigned char bt_##bit : 1 + (((unsigned )(value) >> bit)&1)
 
-#define     CT_UINT(name, value)        typedef struct {COMPILETIME_CONSTANT_BIT(value, 0); COMPILETIME_CONSTANT_BIT(value, 1);COMPILETIME_CONSTANT_BIT(value, 2);COMPILETIME_CONSTANT_BIT(value, 3);COMPILETIME_CONSTANT_BIT(value, 4);COMPILETIME_CONSTANT_BIT(value, 5);\
-COMPILETIME_CONSTANT_BIT(value, 6);COMPILETIME_CONSTANT_BIT(value, 7);COMPILETIME_CONSTANT_BIT(value, 8);COMPILETIME_CONSTANT_BIT(value, 9);\
-COMPILETIME_CONSTANT_BIT(value, 10);COMPILETIME_CONSTANT_BIT(value, 11);COMPILETIME_CONSTANT_BIT(value, 12);COMPILETIME_CONSTANT_BIT(value, 13);COMPILETIME_CONSTANT_BIT(value, 14);COMPILETIME_CONSTANT_BIT(value, 15);\
-COMPILETIME_CONSTANT_BIT(value, 16);COMPILETIME_CONSTANT_BIT(value, 17);COMPILETIME_CONSTANT_BIT(value, 18);COMPILETIME_CONSTANT_BIT(value, 19);COMPILETIME_CONSTANT_BIT(value, 20);COMPILETIME_CONSTANT_BIT(value, 21);\
-COMPILETIME_CONSTANT_BIT(value, 22);COMPILETIME_CONSTANT_BIT(value, 23);COMPILETIME_CONSTANT_BIT(value, 24);\
-COMPILETIME_CONSTANT_BIT(value, 25);COMPILETIME_CONSTANT_BIT(value, 26);COMPILETIME_CONSTANT_BIT(value, 27);COMPILETIME_CONSTANT_BIT(value, 28);COMPILETIME_CONSTANT_BIT(value, 29);COMPILETIME_CONSTANT_BIT(value, 30);COMPILETIME_CONSTANT_BIT(value, 31);} name
-
+#define     CT_UINT(name, value)        typedef union {char val_; struct {COMPILETIME_CONSTANT_BIT(value, 0); COMPILETIME_CONSTANT_BIT(value, 1);COMPILETIME_CONSTANT_BIT(value, 2);COMPILETIME_CONSTANT_BIT(value, 3);};struct{COMPILETIME_CONSTANT_BIT(value, 4);COMPILETIME_CONSTANT_BIT(value, 5);\
+COMPILETIME_CONSTANT_BIT(value, 6);COMPILETIME_CONSTANT_BIT(value, 7);};struct{COMPILETIME_CONSTANT_BIT(value, 8);COMPILETIME_CONSTANT_BIT(value, 9);\
+COMPILETIME_CONSTANT_BIT(value, 10);COMPILETIME_CONSTANT_BIT(value, 11);};struct{COMPILETIME_CONSTANT_BIT(value, 12);COMPILETIME_CONSTANT_BIT(value, 13);COMPILETIME_CONSTANT_BIT(value, 14);COMPILETIME_CONSTANT_BIT(value, 15);};\
+struct{COMPILETIME_CONSTANT_BIT(value, 16);COMPILETIME_CONSTANT_BIT(value, 17);COMPILETIME_CONSTANT_BIT(value, 18);COMPILETIME_CONSTANT_BIT(value, 19);};struct{COMPILETIME_CONSTANT_BIT(value, 20);COMPILETIME_CONSTANT_BIT(value, 21);\
+COMPILETIME_CONSTANT_BIT(value, 22);COMPILETIME_CONSTANT_BIT(value, 23);};struct{COMPILETIME_CONSTANT_BIT(value, 24);\
+COMPILETIME_CONSTANT_BIT(value, 25);COMPILETIME_CONSTANT_BIT(value, 26);COMPILETIME_CONSTANT_BIT(value, 27);};struct{COMPILETIME_CONSTANT_BIT(value, 28);COMPILETIME_CONSTANT_BIT(value, 29);COMPILETIME_CONSTANT_BIT(value, 30);COMPILETIME_CONSTANT_BIT(value, 31);};} name
 
 
 #define GET_BT_REF(nullstruct, bit, chkbit, elz)       (bit == chkbit ? sizeof(nullstruct->bt_ ##chkbit ) == 2 :  elz)
@@ -50,7 +49,7 @@ GET_BT_REF(nullstruct, bit, 30, GET_BT_REF(nullstruct, bit, 31, 0)))))))))))))))
 
 
 
-#define     DECODE_CT_BIT(name, bit)        ((sizeof(name->bt_ ##bit ) == 2) << bit)
+#define     DECODE_CT_BIT(name, bit)        (( ((name){{-1}}).bt_##bit != 1)  << bit)
 #define     DECODE_CT_UINT__(name)            \
 (DECODE_CT_BIT(name, 0) | DECODE_CT_BIT(name, 1) |DECODE_CT_BIT(name, 2) \
 |DECODE_CT_BIT(name, 3) |DECODE_CT_BIT(name, 4) |DECODE_CT_BIT(name, 5) \
@@ -67,7 +66,8 @@ GET_BT_REF(nullstruct, bit, 30, GET_BT_REF(nullstruct, bit, 31, 0)))))))))))))))
 |DECODE_CT_BIT(name, 26) |DECODE_CT_BIT(name, 27)\
 |DECODE_CT_BIT(name, 28) |DECODE_CT_BIT(name, 29)\
 |DECODE_CT_BIT(name, 30) |DECODE_CT_BIT(name, 31))
-#define DECODE_CT_UINT(name)        DECODE_CT_UINT__(((name*)0))
+
+#define DECODE_CT_UINT(name)        DECODE_CT_UINT__(name)
 #define DECODE_CT_UINT_BY_REF(ref_) DECODE_CT_UINT__(ref_)      
 
 #define     CT_STRING_4BYTE(length, name, str, idx) \
@@ -156,11 +156,6 @@ typedef struct {\
     CT_UINT(name, __hashof_##name)
 
 
-typedef struct {
-	unsigned length;
-	void* head;
-	void* tail;
-}list_t;
 #define POINTER_WITH_METADATA(type, metatype, name)      typedef union {type* ptr; metatype* meta;}name
 
 
